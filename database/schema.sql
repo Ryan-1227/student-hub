@@ -1,0 +1,41 @@
+CREATE DATABASE IF NOT EXISTS student_hub CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE student_hub;
+
+CREATE TABLE users (
+ id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(100) NOT NULL, email VARCHAR(190) NOT NULL UNIQUE,
+ password_hash VARCHAR(255) NOT NULL, role ENUM('student','admin') NOT NULL DEFAULT 'student', mobile VARCHAR(20) NULL, year_of_study TINYINT NULL, gender ENUM('male','female','other','prefer_not_to_say') NULL, status ENUM('active','inactive') NOT NULL DEFAULT 'active',
+ course VARCHAR(100) NULL, theme ENUM('light','dark') NOT NULL DEFAULT 'light', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE notices (
+ id INT AUTO_INCREMENT PRIMARY KEY, title VARCHAR(180) NOT NULL, body TEXT NOT NULL, author_id INT NOT NULL,
+ published_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE
+);
+CREATE TABLE events (
+ id INT AUTO_INCREMENT PRIMARY KEY, title VARCHAR(180) NOT NULL, description TEXT, starts_at DATETIME NOT NULL, ends_at DATETIME NULL,
+ location VARCHAR(180), category VARCHAR(80) NULL, poster_path VARCHAR(255) NULL, event_status ENUM('open','closed') NOT NULL DEFAULT 'open', author_id INT NOT NULL, FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE
+);
+CREATE TABLE timetable_entries (
+ id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, day_of_week TINYINT NOT NULL, starts_at TIME NOT NULL, ends_at TIME NOT NULL,
+ subject VARCHAR(120) NOT NULL, room VARCHAR(80), FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+CREATE TABLE resources (
+ id INT AUTO_INCREMENT PRIMARY KEY, title VARCHAR(180) NOT NULL, description TEXT, course VARCHAR(100), file_path VARCHAR(255) NOT NULL,
+ original_name VARCHAR(255) NOT NULL, uploaded_by INT NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+ FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE CASCADE
+);
+CREATE TABLE feedback (
+ id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, subject VARCHAR(180) NOT NULL, message TEXT NOT NULL,
+ status ENUM('open','reviewed','closed') NOT NULL DEFAULT 'open', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+ FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+CREATE TABLE audit_logs (
+ id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NULL, action VARCHAR(120) NOT NULL, detail VARCHAR(255), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+ FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+);
+CREATE TABLE contact_messages (
+ id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(100) NOT NULL, email VARCHAR(190) NOT NULL, message TEXT NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE event_registrations (
+ id INT AUTO_INCREMENT PRIMARY KEY, event_id INT NOT NULL, user_id INT NOT NULL, registered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+ UNIQUE KEY unique_event_registration (event_id,user_id), FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);

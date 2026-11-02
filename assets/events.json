@@ -1,0 +1,5 @@
+[
+  {"id": 1, "title": "AI Innovation Workshop 2026", "description": "Hands-on introduction to prompt engineering, responsible AI and rapid prototype building for CSPIT students.", "starts_at": "2026-11-18T10:00", "location": "CSPIT Computer Lab 2", "category": "AI Workshop", "image_url": "https://cqst.in/images/news/21-04-2026/ai_workshop.jpg"},
+  {"id": 2, "title": "CHARUSAT Sports Fest", "description": "Inter-department athletics, badminton, volleyball and team events. Bring your college ID and sports kit.", "starts_at": "2026-11-25T08:00", "location": "CHARUSAT Sports Ground", "category": "Sports", "image_url": "https://gjusthisar.in/portal/upload/24_27November2024_14-16-34-94.jpg"},
+  {"id": 3, "title": "Web Technology Project Showcase", "description": "Present your StudentHub project, get peer feedback and meet student developers across CSPIT.", "starts_at": "2026-12-02T11:00", "location": "CSPIT Seminar Hall", "category": "Academic", "image_url": "https://aitsrajampet.ac.in/images/event/jan/Three-Days-Workshop-on-A-Comprehensive-Introduction%20%282%29.jpg"}
+]

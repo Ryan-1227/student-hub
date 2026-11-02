@@ -1,0 +1,26 @@
+<?php
+declare(strict_types=1);
+ini_set('session.use_strict_mode', '1');
+session_set_cookie_params(['httponly'=>true, 'samesite'=>'Lax', 'secure'=>(!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')]);
+session_start();
+$configFile = __DIR__ . '/config.php';
+if (!file_exists($configFile)) { http_response_code(503); exit('Create config.php from config.example.php first.'); }
+$config = require $configFile;
+try { $pdo = new PDO($config['db_dsn'], $config['db_user'], $config['db_password'], [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]);
+if($pdo->getAttribute(PDO::ATTR_DRIVER_NAME)==='sqlite') { $pdo->exec("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL,email TEXT NOT NULL UNIQUE,password_hash TEXT NOT NULL,role TEXT NOT NULL DEFAULT 'student',mobile TEXT,year_of_study INTEGER,gender TEXT,status TEXT NOT NULL DEFAULT 'active',course TEXT,theme TEXT NOT NULL DEFAULT 'light',created_at TEXT DEFAULT CURRENT_TIMESTAMP); CREATE TABLE IF NOT EXISTS notices (id INTEGER PRIMARY KEY AUTOINCREMENT,title TEXT NOT NULL,body TEXT NOT NULL,author_id INTEGER NOT NULL,published_at TEXT DEFAULT CURRENT_TIMESTAMP); CREATE TABLE IF NOT EXISTS events (id INTEGER PRIMARY KEY AUTOINCREMENT,title TEXT NOT NULL,description TEXT,starts_at TEXT NOT NULL,ends_at TEXT,location TEXT,category TEXT,poster_path TEXT,event_status TEXT NOT NULL DEFAULT 'open',author_id INTEGER NOT NULL); CREATE TABLE IF NOT EXISTS timetable_entries (id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER NOT NULL,day_of_week INTEGER NOT NULL,starts_at TEXT NOT NULL,ends_at TEXT NOT NULL,subject TEXT NOT NULL,room TEXT); CREATE TABLE IF NOT EXISTS resources (id INTEGER PRIMARY KEY AUTOINCREMENT,title TEXT NOT NULL,description TEXT,course TEXT,file_path TEXT NOT NULL,original_name TEXT NOT NULL,uploaded_by INTEGER NOT NULL,created_at TEXT DEFAULT CURRENT_TIMESTAMP); CREATE TABLE IF NOT EXISTS feedback (id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER NOT NULL,subject TEXT NOT NULL,message TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'open',created_at TEXT DEFAULT CURRENT_TIMESTAMP); CREATE TABLE IF NOT EXISTS audit_logs (id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER,action TEXT NOT NULL,detail TEXT,created_at TEXT DEFAULT CURRENT_TIMESTAMP); CREATE TABLE IF NOT EXISTS contact_messages (id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL,email TEXT NOT NULL,message TEXT NOT NULL,created_at TEXT DEFAULT CURRENT_TIMESTAMP); CREATE TABLE IF NOT EXISTS event_registrations (id INTEGER PRIMARY KEY AUTOINCREMENT,event_id INTEGER NOT NULL,user_id INTEGER NOT NULL,registered_at TEXT DEFAULT CURRENT_TIMESTAMP,UNIQUE(event_id,user_id));"); } }
+catch (PDOException $e) { $pdo = null; }
+function user(): ?array { return $_SESSION['user'] ?? null; }
+function logged_in(): bool { if (!user()) return false; if ((time() - ($_SESSION['last_activity'] ?? 0)) > 1800) { $_SESSION=[]; session_destroy(); return false; } $_SESSION['last_activity']=time(); return true; }
+function require_login(): void { if (!logged_in()) { header('Location: index.php'); exit; } }
+function require_admin(): void { require_login(); if (user()['role'] !== 'admin') { http_response_code(403); exit('Administrator access required.'); } }
+function csrf(): string { $_SESSION['csrf'] ??= bin2hex(random_bytes(32)); return $_SESSION['csrf']; }
+function verify_csrf(): void { if (!hash_equals($_SESSION['csrf'] ?? '', $_POST['csrf'] ?? '')) { http_response_code(419); exit('Invalid form token.'); } }
+function e(?string $v): string { return htmlspecialchars($v ?? '', ENT_QUOTES, 'UTF-8'); }
+function valid_name(string $value, int $min=2, int $max=100): bool { return (bool)preg_match("/^[\\p{L} .'-]{".$min.",".$max."}$/u", $value); }
+function flash(string $message, string $kind='success'): void { $_SESSION['flash']=[$message,$kind]; }
+function show_flash(): void { if(!empty($_SESSION['flash'])) { [$message,$kind]=$_SESSION['flash']; unset($_SESSION['flash']); echo '<p class="flash '.e($kind).'">'.e($message).'</p>'; } }
+function log_action(?PDO $pdo, string $action, string $detail = ''): void { if(!$pdo)return; $s=$pdo->prepare('INSERT INTO audit_logs(user_id,action,detail) VALUES(?,?,?)'); $s->execute([user()['id'] ?? null,$action,$detail]); }
+function page_top(string $title): void { global $config; $u=user(); $theme=$u['theme'] ?? 'light'; ?>
+<!doctype html><html lang="en" data-theme="<?=e($theme)?>"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title><?=e($title)?> | <?=e($config['app_name'])?></title><link rel="stylesheet" href="assets/style.css"></head><body>
+<?php if($u): ?><a class="skip-link" href="#content">Skip to content</a><header><a class="brand" href="dashboard.php">Student Hub</a><nav aria-label="Main navigation"><a href="dashboard.php">Dashboard</a><a href="events.php">Events</a><a href="resources.php">Resources</a><a href="feedback.php">Feedback</a><?php if($u['role']==='admin'): ?><a href="students.php">Students</a><a href="admin.php">Admin</a><?php endif; ?><a href="auth.php?action=logout">Sign out</a></nav></header><?php endif; ?><main id="content" class="container"><?php show_flash(); }
+function page_bottom(): void { ?></main><script src="assets/app.js"></script></body></html><?php }
